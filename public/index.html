@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imaginando mi posición</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #3498db;
+            color: #333;
+        }
+        #container {
+            width: 120%;
+            margin: 50px auto;
+        }
+        #imageContainer {
+            margin-bottom: 80px;
+        }
+        #gameArea {
+            display: none;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 50px;
+        }
+        .optionContainer {
+            margin: 10px;
+            flex: 3 3 calc(33% - 20px);
+        }
+        .option {
+            width: 160px;
+            height: 100px;
+            cursor: pointer;
+            border: 2px solid #ccc;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
+        }
+        .option img {
+            width: 150px;
+            height: 80px;
+        }
+        #result, #timeElapsed {
+            font-size: 20px;
+            margin-top: 20px;
+        }
+        #startButton, #restartButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: green;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Imaginando mi posición</h1>
+        <div id="instructions">
+          <h2>Observa la imagen superior y </h2> 
+            <h2>selecciona la posición </h2>
+             <h2> correcta de las figuras inferiores:</h2>
+            <p>Frontal, Posterior, Superior, Inferior, Izquierda o Derecha.</p>
+        </div>
+       
+        
+        <div id="imageContainer">
+            <img id="originalImage" src="https://cdn.glitch.global/89e08245-35ab-40ab-a4ea-d26e135e997b/77c23f36-2657-4d5e-9f6c-08a8f0b4e53a.image.png?v=1715992329979" alt="Imagen original">
+        </div>
+      <div id="nameContainer">
+            <label for="username">Nombre de usuario:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        
+      <button id="startButton">Iniciar Juego</button>
+        <div id="gameArea">
+            <div class="optionContainer">
+                <div class="option" id="frontal">
+                    <img src="https://cdn.glitch.global/89e08245-35ab-40ab-a4ea-d26e135e997b/6a0ad38e-0f01-4d0d-b82e-b4439b42600f.image.png?v=1715992014535" alt="Frontal">
+                </div>
+            </div>
+            <div class="optionContainer">
+                <div class="option" id="posterior">
+                    <img src="https://cdn.glitch.global/89e08245-35ab-40ab-a4ea-d26e135e997b/7efab94d-9bc7-4a55-99a1-b7922a81b049.image.png?v=1715992001203" alt="Posterior">
+                </div>
+            </div>
+            <div class="optionContainer">
+                <div class="option" id="superior">
+                    <img src="https://cdn.glitch.global/89e08245-35ab-40ab-a4ea-d26e135e997b/73d52a92-6ac8-473f-ab40-f69f4b16cb52.image.png?v=1715992032479" alt="Superior">
+                </div>
+            </div>
+            <div class="optionContainer">
+                <div class="option" id="inferior">
+                    <img src="https://cdn.glitch.global/89e08245-35ab-40ab-a4ea-d26e135e997b/21374d18-814e-4db7-b590-2c698a866446.image.png?v=1715992058966" alt="Inferior">
+                </div>
+            </div>
+            <div class="optionContainer">
+                <div class="option" id="izquierda">
+                    <img src="https://cdn.glitch.global/89e08245-35ab-40ab-a4ea-d26e135e997b/2fd7ecae-a640-49c3-8dc0-be0854c44868.image.png?v=1715991989705" alt="Izquierda">
+                </div>
+            </div>
+            <div class="optionContainer">
+                <div class="option" id="derecha">
+                    <img src="https://cdn.glitch.global/89e08245-35ab-40ab-a4ea-d26e135e997b/c34341e8-2e67-4ca2-811a-0145da83742b.image.png?v=1715991976050" alt="Derecha">
+                </div>
+            </div>
+        </div>
+        <div id="prompt" style="font-size: 24px; margin-top: 20px;"></div>
+        <div id="result"></div>
+        <div id="timeElapsed"></div>
+        <button id="restartButton" style="display: none;">Jugar de Nuevo</button>
+    </div>
+<script>
+        const positions = ["frontal", "posterior", "superior", "inferior", "izquierda", "derecha"];
+        let correctAnswers = 0;
+        let startTime;
+        let currentPrompt;
+        let attempts = 0;
+        let errors = 0;
+
+        function getRandomPosition() {
+            const randomIndex = Math.floor(Math.random() * positions.length);
+            return positions[randomIndex];
+        }
+
+        function startGame() {
+            const username = document.getElementById('username').value.trim();
+            if (!username) {
+                alert('Por favor, introduce tu nombre de usuario.');
+                return;
+            }
+            document.getElementById('nameContainer').style.display = 'none';
+            document.getElementById('instructions').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'flex';
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('restartButton').style.display = 'none';
+            document.getElementById('result').textContent = '';
+            document.getElementById('timeElapsed').textContent = '';
+            correctAnswers = 0;
+            errors = 0;
+            attempts++;
+            startTime = new Date();
+            showNextPrompt();
+        }
+
+        function showNextPrompt() {
+            if (positions.length === 0) {
+                displayResult();
+                return;
+            }
+            currentPrompt = getRandomPosition();
+            const promptIndex = positions.indexOf(currentPrompt);
+            if (promptIndex > -1) {
+                positions.splice(promptIndex, 1);
+            }
+            document.getElementById('prompt').textContent = `Toca la cara: ${currentPrompt.charAt(0).toUpperCase() + currentPrompt.slice(1)}`;
+        }
+
+        function checkAnswer(event) {
+            const selectedOption = event.currentTarget.id;
+            if (selectedOption === currentPrompt) {
+                correctAnswers++;
+            } else {
+                errors++;
+            }
+            showNextPrompt();
+        }
+
+        function displayResult() {
+            let endTime = new Date();
+            let timeDiff = endTime - startTime;
+            let seconds = Math.round(timeDiff / 1000);
+
+            let resultText = `Excelente tienes  ${correctAnswers} de 6 respuestas.`;
+            if (correctAnswers === 6) {
+                resultText += ' ¡Felicidades, acertaste en todas las caras!';
+            } else {
+                resultText += ' ¡Bien hecho, puedes hacerlo mejor!';
+            }
+
+            document.getElementById('result').textContent = resultText;
+            document.getElementById('timeElapsed').textContent = `Tiempo transcurrido: ${seconds} segundos`;
+            document.getElementById('restartButton').style.display = 'inline-block';
+
+            savePlayerData(document.getElementById('username').value.trim(), attempts, seconds, errors, correctAnswers === 6);
+        }
+
+        function savePlayerData(name, attempts, time, errors, won) {
+            fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ nombre: name, intento: attempts, tiempo: time, errores: errors, gano: won })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Datos guardados exitosamente:', data);
+            })
+            .catch((error) => {
+                console.error('Error al guardar los datos:', error);
+            });
+        }
+
+        function restartGame() {
+            positions.push("frontal", "posterior", "superior", "inferior", "izquierda", "derecha");
+            startGame();
+        }
+
+        document.getElementById('startButton').addEventListener('click', startGame);
+        document.getElementById('restartButton').addEventListener('click', restartGame);
+        document.querySelectorAll('.option').forEach(option => {
+            option.addEventListener('click', checkAnswer);
+        });
+    </script>
+</body>
+</html>

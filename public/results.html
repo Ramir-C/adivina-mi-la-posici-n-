@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Resultados - Recordando figuras</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --card:#ffffff;
+      --accent:#2b7cff;
+      --muted:#6b7280;
+      --success:#16a34a;
+    }
+    html,body{height:100%;margin:0;font-family:Inter, Arial, sans-serif;background:var(--bg);color:#111}
+    .container{max-width:1100px;margin:36px auto;padding:20px}
+    .card{background:var(--card);border-radius:10px;padding:18px;box-shadow:0 6px 18px rgba(12,15,20,0.06)}
+    h1{margin:0 0 8px;font-size:20px}
+    p.lead{margin:0 0 16px;color:var(--muted)}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+    .controls .left{flex:1;display:flex;gap:8px;align-items:center}
+    input[type="search"]{padding:8px 12px;border:1px solid #ddd;border-radius:8px;min-width:220px}
+    .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+    .btn.secondary{background:#efefef;color:#222}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:10px 12px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
+    th{background:#fafbff;position:relative;user-select:none;cursor:pointer}
+    th .sort{font-size:12px;color:var(--muted);margin-left:8px}
+    tr:hover td{background:#fbfdff}
+    .small{font-size:12px;color:var(--muted)}
+    .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px}
+    .page-btn{padding:6px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
+    .page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .empty{padding:20px;text-align:center;color:var(--muted)}
+    .actions{display:flex;gap:8px}
+    @media (max-width:720px){
+      .controls{flex-direction:column;align-items:stretch}
+      th,td{font-size:13px;padding:8px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" role="region" aria-label="Tabla de resultados">
+      <h1>Resultados del juego</h1>
+      <p class="lead">Listado de jugadores y métricas. Los datos se obtienen desde <code>/users</code>.</p>
+
+      <div class="controls">
+        <div class="left">
+          <label for="q" class="small" aria-hidden="true">Buscar:</label>
+          <input id="q" type="search" placeholder="Buscar por nombre..." aria-label="Buscar por nombre">
+          <div style="width:6px"></div>
+          <button id="refresh" class="btn secondary" title="Refrescar tabla">Actualizar</button>
+        </div>
+
+        <div class="actions">
+          <button id="exportCsv" class="btn" title="Exportar a CSV">Exportar CSV</button>
+        </div>
+      </div>
+
+      <div id="tableWrap" style="overflow:auto">
+        <table id="resultsTable" aria-live="polite">
+          <thead>
+            <tr>
+              <th data-key="id">ID <span class="sort">↕</span></th>
+              <th data-key="nombre">Nombre <span class="sort">↕</span></th>
+              <th data-key="intento">Intentos <span class="sort">↕</span></th>
+              <th data-key="tiempo">Tiempo (s) <span class="sort">↕</span></th>
+              <th data-key="errores">Errores <span class="sort">↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="5" class="empty">Cargando datos…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pager" aria-hidden="false">
+        <div class="small" id="info">—</div>
+        <div id="pagination"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const API = '/users';
+  const PAGE_SIZE = 10;
+
+  let data = [];         // original full data
+  let filtered = [];     // filtered & sorted
+  let sortKey = 'id';
+  let sortDir = -1;      // -1 desc, 1 asc
+  let page = 1;
+
+  const q = document.getElementById('q');
+  const tbody = document.getElementById('tbody');
+  const info = document.getElementById('info');
+  const pagination = document.getElementById('pagination');
+  const refreshBtn = document.getElementById('refresh');
+  const exportBtn = document.getElementById('exportCsv');
+  const table = document.getElementById('resultsTable');
+  const headers = Array.from(table.querySelectorAll('th'));
+
+  function renderTablePage() {
+    const start = (page-1)*PAGE_SIZE;
+    const pageData = filtered.slice(start, start + PAGE_SIZE);
+
+    if (pageData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay resultados que mostrar.</td></tr>';
+    } else {
+      tbody.innerHTML = pageData.map(row => `
+        <tr>
+          <td>${escapeHtml(row.id)}</td>
+          <td>${escapeHtml(row.nombre)}</td>
+          <td>${escapeHtml(row.intento)}</td>
+          <td>${escapeHtml(row.tiempo)}</td>
+          <td>${escapeHtml(row.errores)}</td>
+        </tr>
+      `).join('');
+    }
+
+    const from = filtered.length === 0 ? 0 : start + 1;
+    const to = Math.min(start + PAGE_SIZE, filtered.length);
+    info.textContent = `Mostrando ${from}-${to} de ${filtered.length} resultados`;
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    pagination.innerHTML = '';
+    for (let i=1;i<=pages;i++){
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (i===page ? ' active' : '');
+      btn.textContent = i;
+      btn.addEventListener('click', () => {
+        page = i;
+        renderTablePage();
+        window.scrollTo({top:0,behavior:'smooth'});
+      });
+      pagination.appendChild(btn);
+    }
+  }
+
+  function applyFilterSort() {
+    const term = q.value.trim().toLowerCase();
+    filtered = data.filter(r => {
+      if (!term) return true;
+      return (r.nombre||'').toString().toLowerCase().includes(term) ||
+             (r.id||'').toString().includes(term) ||
+             (r.intento||'').toString().includes(term);
+    });
+
+    filtered.sort((a,b) => {
+      const va = normalizeForSort(a[sortKey]);
+      const vb = normalizeForSort(b[sortKey]);
+      if (va < vb) return -1 * sortDir;
+      if (va > vb) return 1 * sortDir;
+      return 0;
+    });
+
+    page = 1;
+    renderTablePage();
+  }
+
+  function normalizeForSort(v){
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'number') return v;
+    // try numeric
+    const n = Number(v);
+    return isNaN(n) ? v.toString().toLowerCase() : n;
+  }
+
+  function fetchData(){
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Cargando datos…</td></tr>';
+    fetch(API)
+      .then(r => {
+        if (!r.ok) throw new Error('Respuesta ' + r.status);
+        return r.json();
+      })
+      .then(json => {
+        // espera { users: [...] } o directamente array
+        data = Array.isArray(json) ? json : (json.users || []);
+        // normalizar campos
+        data = data.map(row => ({
+          id: row.id,
+          nombre: row.nombre || '',
+          intento: row.intento || 0,
+          tiempo: row.tiempo || 0,
+          errores: row.errores || 0
+        }));
+        applyFilterSort();
+      })
+      .catch(err => {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="5" class="empty">Error cargando datos: ${escapeHtml(err.message)}</td></tr>`;
+        info.textContent = 'Error';
+      });
+  }
+
+  // ordenamiento por header
+  headers.forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-key');
+      if (!key) return;
+      if (sortKey === key) sortDir = -sortDir;
+      else { sortKey = key; sortDir = -1; }
+      // marcar visualmente
+      headers.forEach(h => h.style.background='');
+      th.style.background = '#eef4ff';
+      applyFilterSort();
+    });
+  });
+
+  // búsqueda con debounce
+  let debounceTimer;
+  q.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(applyFilterSort, 250);
+  });
+
+  refreshBtn.addEventListener('click', fetchData);
+
+  exportBtn.addEventListener('click', () => {
+    if (!filtered.length) return alert('No hay datos para exportar');
+    // generar CSV
+    const rows = [
+      ['id','nombre','intento','tiempo','errores'],
+      ...filtered.map(r => [r.id, r.nombre, r.intento, r.tiempo, r.errores])
+    ];
+    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'recordando_resultados.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // util
+  function escapeHtml(s){
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  // inicializar
+  fetchData();
+})();
+</script>
+</body>
+</html>
