@@ -43,7 +43,7 @@ db.connect((err) => {
 });
 
 // Endpoint para guardar datos
-app.post("/save", (req, res) => {
+app.post("/players", (req, res) => {
   const { nombre, intento, tiempo, errores } = req.body;
   const query = "INSERT INTO players (nombre, intento, tiempo, errores) VALUES (?, ?, ?, ?)";
   db.query(query, [nombre, intento, tiempo, errores], (err, result) => {
@@ -55,7 +55,7 @@ app.post("/save", (req, res) => {
 });
 
 // Endpoint para obtener datos
-app.get("/users", (req, res) => {
+app.get("/players", (req, res) => {
   const query = "SELECT * FROM players";
   db.query(query, (err, rows) => {
     if (err) {
