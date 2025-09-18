@@ -192,7 +192,7 @@
         }
 
         function savePlayerData(name, attempts, time, errors, won) {
-            fetch('/save', {
+            fetch('players', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
