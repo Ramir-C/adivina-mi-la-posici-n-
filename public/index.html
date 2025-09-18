@@ -192,12 +192,12 @@
         }
 
         function savePlayerData(name, attempts, time, errors, won) {
-            fetch('players', {
+            fetch('/players', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ nombre: name, intento: attempts, tiempo: time, errores: errors, gano: won })
+                body: JSON.stringify({ nombre: name, intento: attempts, tiempo: time, errores: errors })
             })
             .then(response => response.json())
             .then(data => {
@@ -221,3 +221,4 @@
     </script>
 </body>
 </html>
+
