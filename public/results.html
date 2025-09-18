@@ -43,7 +43,7 @@
   <div class="container">
     <div class="card" role="region" aria-label="Tabla de resultados">
       <h1>Resultados del juego</h1>
-      <p class="lead">Listado de jugadores y métricas. Los datos se obtienen desde <code>/users</code>.</p>
+      <p class="lead">Listado de jugadores y métricas. Los datos se obtienen desde <code>/players</code>.</p>
 
       <div class="controls">
         <div class="left">
@@ -84,7 +84,7 @@
 
 <script>
 (() => {
-  const API = '/users';
+  const API = '/players';
   const PAGE_SIZE = 10;
 
   let data = [];         // original full data
