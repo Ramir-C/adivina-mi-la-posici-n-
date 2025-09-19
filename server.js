@@ -28,7 +28,7 @@ db.connect((err) => {
 
   // Crear tabla si no existe
   const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS players (
+    CREATE TABLE IF NOT EXISTS players1 (
       id INT AUTO_INCREMENT PRIMARY KEY,
       nombre VARCHAR(100),
       intento INT,
@@ -45,7 +45,7 @@ db.connect((err) => {
 // Endpoint para guardar datos
 app.post("/players", (req, res) => {
   const { nombre, intento, tiempo, errores } = req.body;
-  const query = "INSERT INTO players (nombre, intento, tiempo, errores) VALUES (?, ?, ?, ?)";
+  const query = "INSERT INTO players1 (nombre, intento, tiempo, errores) VALUES (?, ?, ?, ?)";
   db.query(query, [nombre, intento, tiempo, errores], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -55,8 +55,8 @@ app.post("/players", (req, res) => {
 });
 
 // Endpoint para obtener datos
-app.get("/players", (req, res) => {
-  const query = "SELECT * FROM players";
+app.get("/players1", (req, res) => {
+  const query = "SELECT * FROM players1";
   db.query(query, (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
